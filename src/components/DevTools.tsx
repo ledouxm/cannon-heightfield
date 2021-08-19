@@ -11,12 +11,9 @@ export const DevTools = () => {
     return (
         <>
             <Center zIndex="10" position="absolute" bottom="0" direction="row">
-                <ToggleButton
-                    label="result without matrix rotation"
-                    colorScheme="red"
-                    state={debug}
-                    onClick={() => toggleDebug()}
-                />
+                <Button colorScheme="red" onClick={() => toggleDebug()}>
+                    Switch
+                </Button>
                 <ToggleButton
                     label="wireframe"
                     colorScheme="facebook"
@@ -39,8 +36,8 @@ export const DevTools = () => {
             <Center position="absolute" top="0" right="0">
                 <Box w="600px" fontSize="24px">
                     {debug
-                        ? "Collider and mesh don't overlap because inner vertices of the collider and the mesh have different rotation"
-                        : "Collider and mesh overlap since we rotated the collider matrix by PI / 2 and the mesh accordingly"}
+                        ? "Collider (red) and mesh (black) don't overlap because inner vertices of the collider and the mesh have different rotation"
+                        : "Collider (red) and mesh (black) overlap since we rotated the collider matrix by PI / 2 and the mesh accordingly"}
                 </Box>
             </Center>
         </>

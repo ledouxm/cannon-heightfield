@@ -10,7 +10,7 @@ import { Plane } from "@react-three/drei";
 import { rotateMatrix } from "./matrixUtils";
 
 export const displayMeshAtom = atomWithToggle(true);
-export const displayColliderAtom = atomWithToggle(false);
+export const displayColliderAtom = atomWithToggle(true);
 export const wireframeAtom = atomWithToggle(true);
 export const debugAtom = atomWithToggle(true);
 
