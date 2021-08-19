@@ -1,107 +1,139 @@
-import { Button, Center, Stack } from "@chakra-ui/react";
+import { Center } from "@chakra-ui/react";
 import { atomWithToggle } from "@pastable/core";
-import { Physics, Triplet, useBox, useHeightfield } from "@react-three/cannon";
-import { Plane } from "@react-three/drei";
+import { Debug, Physics, Triplet, useHeightfield } from "@react-three/cannon";
 import { Canvas } from "@react-three/fiber";
-import { atom } from "jotai";
-import { useUpdateAtom, useAtomValue } from "jotai/utils";
-import { DataTexture, RGBFormat, Vector2Tuple } from "three";
+import { useAtomValue } from "jotai/utils";
+import { DataTexture, RGBFormat } from "three";
 import { CameraControls } from "./CameraControls";
 import { DevTools } from "./DevTools";
+import { Plane } from "@react-three/drei";
+import { rotateMatrix } from "./matrixUtils";
 
+export const displayMeshAtom = atomWithToggle(true);
+export const displayColliderAtom = atomWithToggle(false);
+export const wireframeAtom = atomWithToggle(true);
 export const debugAtom = atomWithToggle(true);
-export const wireframeAtom = atomWithToggle(false);
 
-export const cptAtom = atom(0);
-
+// matrix initialization
 const size = 10;
-// 0 <= value <= 1 number[][]
+
 const matrix = [
-    [1, 1, 1, 0, 1, 1, 0, 0, 1, 0],
-    [1, 1, 1, 1, 1, 0, 1, 0, 0, 1],
-    [1, 0, 1, 0, 1, 0, 1, 1, 0, 1],
-    [0, 0, 0, 0, 1, 1, 0, 1, 0, 0],
-    [1, 1, 1, 0, 1, 1, 1, 0, 1, 1],
-    [1, 1, 1, 1, 0, 1, 1, 1, 1, 1],
-    [0, 0, 1, 1, 0, 1, 0, 1, 1, 1],
-    [1, 0, 1, 1, 1, 0, 1, 1, 1, 0],
-    [0, 0, 1, 1, 0, 1, 1, 0, 1, 0],
-    [0, 1, 0, 0, 1, 1, 1, 0, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 0],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 1, 1],
+    [0, 0, 0, 0, 0, 0, 0, 0, 0, 1],
+    [0, 0, 0, 0, 0, 0, 0, 1, 1, 1],
 ];
 
-// 0 <= value <= 255 number[][]
+// from 0 - 1 to 0 - 255
 const byteMatrix = matrix.map((row) => row.map((value) => value * 255));
-
-// 0 <= value <= 255 Uint8Array r g b
+// from number[][] to rgb buffer
 const buffer = new Uint8Array(
-    byteMatrix.flatMap((row) => row.flatMap((value) => [value, value, value]))
+    byteMatrix.reverse().flatMap((row) => row.reverse().flatMap((value) => [value, value, value]))
 );
-
 // three texture
 const heightTexture = new DataTexture(buffer, size, size, RGBFormat);
+
+// rotated matrix (for the vertices to overlap)
+const rotated = rotateMatrix(JSON.parse(JSON.stringify(matrix)));
 
 export const Demo = () => {
     return (
         <Center h="100%">
             <DevTools />
-            <Canvas camera={{ position: [0, 7, 10] }}>
-                <pointLight intensity={0.1} position={[0, -1, 0]} />
+            <Canvas camera={{ position: [0, 5, 6.2] }}>
+                <pointLight intensity={0.5} position={[0, 2, 0]} />
                 <ambientLight intensity={0.1} />
-                <Physics>
-                    <Terrain />
-                    <SimpleCube />
-                </Physics>
+                <axesHelper />
+                <PhysicWorld />
                 <CameraControls />
             </Canvas>
         </Center>
     );
 };
 
-const rotation: Triplet = [-Math.PI / 2, 0, 0];
-const position: Triplet = [0, -2, 0];
-
-export const Terrain = () => {
+const PhysicWorld = () => {
+    const displayCollider = useAtomValue(displayColliderAtom);
     const debug = useAtomValue(debugAtom);
-    const wireframe = useAtomValue(wireframeAtom);
-
-    const [ref] = useHeightfield(() => ({
-        args: [matrix, { elementSize: 1 }],
-        position,
-        rotation,
-    }));
-
-    // if 1st and 2nd args are 1, the mesh seems at the same place as the collider
-    // but my terrain needs to be scaled
-
-    // if 1st and 2nd args are size (which i want them to be), the mesh is at my desired side
-    // but the collider has not been scaled
-    const firstArgs: Vector2Tuple = debug ? [1, 1] : [size, size];
 
     return (
-        <Plane ref={ref} args={[...firstArgs, size, size]} position={position}>
-            <meshStandardMaterial displacementMap={heightTexture} wireframe={wireframe} />
-        </Plane>
+        <Physics>
+            <Debug scale={displayCollider ? 1 : 0} color="#C0392B">
+                {debug ? <TerrainWithoutRotation /> : <TerrainWithRotation />}
+            </Debug>
+        </Physics>
     );
 };
 
-export const SimpleCube = () => {
-    const debug = useAtomValue(debugAtom);
-    const cpt = useAtomValue(cptAtom);
+const position: Triplet = [-size / 2, 0, -size / 2];
+const rotation: Triplet = [Math.PI / 2, 0, 0];
+const heightScale = 1;
 
-    // debug and cpt as deps for debug purpose
-    const [ref] = useBox(
-        () => ({
-            position: [0, 5, 0],
-            mass: 10,
-        }),
-        null,
-        [debug, cpt]
-    );
+// scene with resolved issue
+export const TerrainWithRotation = () => {
+    const wireframe = useAtomValue(wireframeAtom);
+    const displayMesh = useAtomValue(displayMeshAtom);
+
+    // we use the rotated matrix
+    const [ref] = useHeightfield(() => ({
+        args: [rotated, { elementSize: 1 }],
+        rotation,
+        position,
+    }));
 
     return (
-        <mesh ref={ref}>
-            <boxGeometry />
-            <meshStandardMaterial color="red" />
-        </mesh>
+        <>
+            <group
+                // we rotate the mesh so it matches the collider rotation
+                rotation={[Math.PI, Math.PI, 0]}
+                position={[position[0] - 0.5, position[1], position[2] + size - 0.5]}
+            >
+                <Plane ref={ref} args={[size - 1, size - 1, size - 1, size - 1]}>
+                    <meshStandardMaterial
+                        visible={displayMesh}
+                        // we use the texture created by the non rotated matrix
+                        displacementMap={heightTexture}
+                        displacementScale={-heightScale}
+                        wireframe={wireframe}
+                    />
+                </Plane>
+            </group>
+        </>
+    );
+};
+
+export const TerrainWithoutRotation = () => {
+    const wireframe = useAtomValue(wireframeAtom);
+    const displayMesh = useAtomValue(displayMeshAtom);
+
+    // we used the same matrix as the mesh
+    const [ref] = useHeightfield(() => ({
+        args: [matrix, { elementSize: 1 }],
+        rotation,
+        position,
+    }));
+
+    return (
+        <>
+            <group
+                rotation={[Math.PI, -Math.PI / 2, 0]}
+                position={[position[0] - 0.5, position[1], position[2] - 0.5]}
+            >
+                <Plane ref={ref} args={[size - 1, size - 1, size - 1, size - 1]}>
+                    <meshStandardMaterial
+                        visible={displayMesh}
+                        // we use the texture created by the non rotated matrix
+                        displacementMap={heightTexture}
+                        displacementScale={-heightScale}
+                        wireframe={wireframe}
+                    />
+                </Plane>
+            </group>
+        </>
     );
 };
