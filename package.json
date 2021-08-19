@@ -18,10 +18,13 @@
         "drei": "^2.2.21",
         "framer-motion": "^4.1.17",
         "jotai": "^1.2.2",
+        "nanoid": "^3.1.25",
+        "perlin-noise": "^0.0.1",
         "react": "^17.0.0",
         "react-dom": "^17.0.0",
         "react-icons": "^4.2.0",
         "react-router-dom": "^5.2.0",
+        "seedrandom": "^3.0.5",
         "three": "^0.131.3"
     },
     "devDependencies": {
